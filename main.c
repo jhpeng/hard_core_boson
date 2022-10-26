@@ -28,13 +28,13 @@ void construct_cubic_lattice(int* edge, int lx, int ly, int lz, int lt) {
                 for(int x=0;x<lx;x++) {
                     int i0 = t*volume+z*area+y*lx+x;
 
-                    edge[i0+0] = ((t+1)%lt)*volume+z*area+y*lx+x;
-                    edge[i0+1] = ((t+1)%lt)*volume+((z+1)%lz)*area+y*lx+x;
-                    edge[i0+2] = ((t+1)%lt)*volume+z*area+((y+1)%ly)*lx+x;
-                    edge[i0+3] = ((t+1)%lt)*volume+z*area+y*lx+((x+1)%lx);
-                    edge[i0+4] = ((t+1)%lt)*volume+((z-1+lz)%lz)*area+y*lx+x;
-                    edge[i0+5] = ((t+1)%lt)*volume+z*area+((y-1+ly)%ly)*lx+x;
-                    edge[i0+6] = ((t+1)%lt)*volume+z*area+y*lx+((x-1+lx)%lx);
+                    edge[7*i0+0] = ((t+1)%lt)*volume+z*area+y*lx+x;
+                    edge[7*i0+1] = ((t+1)%lt)*volume+((z+1)%lz)*area+y*lx+x;
+                    edge[7*i0+2] = ((t+1)%lt)*volume+z*area+((y+1)%ly)*lx+x;
+                    edge[7*i0+3] = ((t+1)%lt)*volume+z*area+y*lx+((x+1)%lx);
+                    edge[7*i0+4] = ((t+1)%lt)*volume+((z-1+lz)%lz)*area+y*lx+x;
+                    edge[7*i0+5] = ((t+1)%lt)*volume+z*area+((y-1+ly)%ly)*lx+x;
+                    edge[7*i0+6] = ((t+1)%lt)*volume+z*area+y*lx+((x-1+lx)%lx);
                 }
             }
         }
@@ -100,6 +100,7 @@ void worm_update(int* node, int* worldline, int* edge, int nsite, int nt, double
             head=next;
         }
 
+        printf("%d %d \n",head,tail);
 
         if(head==tail) check=0;
     }
@@ -152,6 +153,11 @@ int main(int argc, char** argv) {
         }
     }
 
+    for(int i=0;i<Nsite;i++) {
+        if(Node[i]) {
+            printf("%d %d \n",WorldLine[2*i],WorldLine[2*i+1]);
+        }
+    }
     // free memory
     free(Edge);
     free(Node);
