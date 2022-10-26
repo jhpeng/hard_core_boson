@@ -22,26 +22,30 @@ int* WorldLine=NULL;
 void construct_cubic_lattice(int* edge, int lx, int ly, int lz, int lt) {
     int volume=lx*ly*lz;
     int area=lx*ly;
+    int nt=6;
     for(int t=0;t<lt;t++) {
         for(int z=0;z<lz;z++) {
             for(int y=0;y<ly;y++) {
                 for(int x=0;x<lx;x++) {
                     int i0 = t*volume+z*area+y*lx+x;
 
-                    edge[7*i0+0] = ((t+1)%lt)*volume+z*area+y*lx+x;
-                    edge[7*i0+1] = ((t+1)%lt)*volume+((z+1)%lz)*area+y*lx+x;
-                    edge[7*i0+2] = ((t+1)%lt)*volume+z*area+((y+1)%ly)*lx+x;
-                    edge[7*i0+3] = ((t+1)%lt)*volume+z*area+y*lx+((x+1)%lx);
-                    edge[7*i0+4] = ((t+1)%lt)*volume+((z-1+lz)%lz)*area+y*lx+x;
-                    edge[7*i0+5] = ((t+1)%lt)*volume+z*area+((y-1+ly)%ly)*lx+x;
-                    edge[7*i0+6] = ((t+1)%lt)*volume+z*area+y*lx+((x-1+lx)%lx);
+                    edge[(nt+1)*i0+0] = ((t+1)%lt)*volume+z*area+y*lx+x;
+                    edge[(nt+1)*i0+1] = ((t+1)%lt)*volume+((z+1)%lz)*area+y*lx+x;
+                    edge[(nt+1)*i0+2] = ((t+1)%lt)*volume+z*area+((y+1)%ly)*lx+x;
+                    edge[(nt+1)*i0+3] = ((t+1)%lt)*volume+z*area+y*lx+((x+1)%lx);
+                    edge[(nt+1)*i0+4] = ((t+1)%lt)*volume+((z-1+lz)%lz)*area+y*lx+x;
+                    edge[(nt+1)*i0+5] = ((t+1)%lt)*volume+z*area+((y-1+ly)%ly)*lx+x;
+                    edge[(nt+1)*i0+6] = ((t+1)%lt)*volume+z*area+y*lx+((x-1+lx)%lx);
                 }
             }
         }
     }
 }
 
-void worm_update(int* node, int* worldline, int* edge, int nsite, int nt, double epsilon, double mu, gsl_rng* rng) {
+void worm_update(int* node, int* worldline, int* edge, int nsite, int nt, gsl_rng* rng) {
+    double epsilon = Epsilon;
+    double mu = Mu;
+
     int tail = (int)(gsl_rng_uniform_pos(rng)*nsite);
     int head = tail;
     int next;
@@ -99,6 +103,110 @@ void worm_update(int* node, int* worldline, int* edge, int nsite, int nt, double
     }
 }
 
+static double nparticle_ave=0;
+static double energy_ave=0;
+static double energy_t_ave=0;
+static double winding_square_x_ave=0;
+static double winding_square_y_ave=0;
+static double winding_square_z_ave=0;
+
+static int measure_count=0;
+void measure(int* node, int* worldline, int* edge, int nsite, int nt, int block_size) {
+    double epsilon = Epsilon;
+    double beta = Beta;
+    double mu = Mu;
+
+    int nhx=0;
+    int nhy=0;
+    int nhz=0;
+    int nht=0;
+    int nhs=0;
+
+    for(int i=0;i<nsite;i++) {
+        if(node[i]) {
+            int k=0;
+            for(int j=0;j<(nt+1);j++) {
+                if(worldline[2*i]==edge[(nt+1)*i+j]) {
+                    k=j;
+                    break;
+                }
+            }
+
+            if(k==0) {
+                nht++;
+            } else if(k==1) {
+                nhz++;
+                nhs++;
+            } else if(k==2) {
+                nhy++;
+                nhs++;
+            } else if(k==3) {
+                nhx++;
+                nhs++;
+            } else if(k==4) {
+                nhz--;
+                nhs++;
+            } else if(k==5) {
+                nhy--;
+                nhs++;
+            } else if(k==6) {
+                nhx--;
+                nhs++;
+            }
+        }
+    }
+
+    int lt=Lt;
+    int lx=Lx;
+    int ly=Ly;
+    int lz=Lz;
+
+    int volume=lx*ly*lz;
+    int nparticle=0;
+    for(int i=0;i<volume;i++) {
+        nparticle += node[i];
+    }
+
+    double energy = -(1.0/beta)*nhs+nt/(lt*(1-nt*epsilon))-mu*nparticle;
+    double energy_t = -(1.0/beta)*nhs+nt*nparticle;
+    double wx = nhx/lx;
+    double wy = nhy/ly;
+    double wz = nhz/lz;
+
+    nparticle_ave += nparticle;
+    energy_ave += energy;
+    energy_t_ave += energy_t;
+    winding_square_x_ave += wx*wx;
+    winding_square_y_ave += wy*wy;
+    winding_square_z_ave += wz*wz;
+
+    measure_count++;
+
+    if(measure_count==block_size) {
+        nparticle_ave = nparticle/block_size;
+        energy_ave = energy_ave/block_size;
+        energy_t_ave = energy_t_ave/block_size;
+        winding_square_x_ave = winding_square_x_ave/block_size;
+        winding_square_y_ave = winding_square_y_ave/block_size;
+        winding_square_z_ave = winding_square_z_ave/block_size;
+
+        printf("n   : %.12e \n",nparticle_ave);
+        printf("e   : %.12e \n",energy_ave);
+        printf("et  : %.12e \n",energy_t_ave);
+        printf("wx2 : %.12e \n",winding_square_x_ave);
+        printf("wy2 : %.12e \n",winding_square_y_ave);
+        printf("wz2 : %.12e \n",winding_square_z_ave);
+
+        nparticle_ave = 0;
+        energy_ave = 0;
+        energy_t_ave = 0;
+        winding_square_x_ave = 0;
+        winding_square_y_ave = 0;
+        winding_square_z_ave = 0;
+    }
+}
+
+
 int main(int argc, char** argv) {
     // optain arguments
     Lx=atoi(argv[1]);
@@ -137,21 +245,20 @@ int main(int argc, char** argv) {
 
     // thermaliztion
     for(int i=0;i<thermal;i++) {
-        worm_update(Node,WorldLine,Edge,Nsite,Nt,Epsilon,Mu,rng);
+        worm_update(Node,WorldLine,Edge,Nsite,Nt,rng);
     }
 
     for(int j=0;j<nblock;j++) {
         for(int i=0;i<block_size;i++) {
-            worm_update(Node,WorldLine,Edge,Nsite,Nt,Epsilon,Mu,rng);
+            for(int k=0;k<10;k++)
+                worm_update(Node,WorldLine,Edge,Nsite,Nt,rng);
+
+            measure(Node,WorldLine,Edge,Nsite,Nt,block_size);
         }
     }
 
-    for(int i=0;i<Nsite;i++) {
-        if(Node[i]) {
-            printf("%d %d \n",WorldLine[2*i],WorldLine[2*i+1]);
-        }
-    }
     // free memory
+    gsl_rng_free(rng);
     free(Edge);
     free(Node);
     free(WorldLine);
