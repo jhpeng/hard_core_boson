@@ -57,18 +57,11 @@ void worm_update(int* node, int* worldline, int* edge, int nsite, int nt, double
     //      going down and destroy particle
     int direction=1;
     while(check) {
-        if(node[head]==0) {
-            if(gsl_rng_uniform_pos(rng)<p0) {
-                direction=0;
-            } else {
-                direction=1;
-            }
+        direction = (int)(gsl_rng_uniform_pos(rng)*2);
+        if(direction) {
+            if(gsl_rng_uniform_pos(rng)>p1) direction=0;
         } else {
-            if(gsl_rng_uniform_pos(rng)<p1) {
-                direction=1;
-            } else {
-                direction=0;
-            }
+            if(gsl_rng_uniform_pos(rng)>p0) direction=1;
         }
 
         if(direction==0 && worldline[2*head]==-1) {
@@ -100,7 +93,7 @@ void worm_update(int* node, int* worldline, int* edge, int nsite, int nt, double
             head=next;
         }
 
-        printf("%d %d \n",head,tail);
+        //printf("%d %d \n",head,tail);
 
         if(head==tail) check=0;
     }
