@@ -112,6 +112,12 @@ int main(int argc, char** argv) {
     Lz=atoi(argv[3]);
     Beta=atof(argv[4]);
     Epsilon=atof(argv[5]);
+    Mu=atof(argv[6]);
+    int thermal=atoi(argv[7]);
+    int block_size=atoi(argv[8]);
+    int nblock=atoi(argv[9]);
+    int seed=atoi(argv[10]);
+
 
     // setup useful parameters
     Lt=(int)(Beta/Epsilon);
@@ -131,7 +137,20 @@ int main(int argc, char** argv) {
         WorldLine[2*i+1] = -1;
     }
 
+    // setup random number generator
+    gsl_rng* rng = gsl_rng_alloc(gsl_rng_mt19937);
+    gsl_rng_set(rng,seed);
 
+    // thermaliztion
+    for(int i=0;i<thermal;i++) {
+        worm_update(Node,WorldLine,Edge,Nsite,Nt,Epsilon,Mu,rng);
+    }
+
+    for(int j=0;j<nblock;j++) {
+        for(int i=0;i<block_size;i++) {
+            worm_update(Node,WorldLine,Edge,Nsite,Nt,Epsilon,Mu,rng);
+        }
+    }
 
     // free memory
     free(Edge);
