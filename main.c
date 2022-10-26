@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <gsl/gsl_rng.h>
 
 // physics parameter
@@ -34,23 +35,75 @@ void construct_cubic_lattice(int* edge, int lx, int ly, int lz, int lt) {
                     edge[i0+4] = ((t+1)%lt)*volume+((z-1+lz)%lz)*area+y*lx+x;
                     edge[i0+5] = ((t+1)%lt)*volume+z*area+((y-1+ly)%ly)*lx+x;
                     edge[i0+6] = ((t+1)%lt)*volume+z*area+y*lx+((x-1+lx)%lx);
-
-                    edge[i0+7] = ((t-1+lt)%lt)*volume+z*area+y*lx+x;
-                    edge[i0+8] = ((t-1+lt)%lt)*volume+((z+1)%lz)*area+y*lx+x;
-                    edge[i0+9] = ((t-1+lt)%lt)*volume+z*area+((y+1)%ly)*lx+x;
-                    edge[i0+10] = ((t-1+lt)%lt)*volume+z*area+y*lx+((x+1)%lx);
-                    edge[i0+11] = ((t-1+lt)%lt)*volume+((z-1+lz)%lz)*area+y*lx+x;
-                    edge[i0+12] = ((t-1+lt)%lt)*volume+z*area+((y-1+ly)%ly)*lx+x;
-                    edge[i0+13] = ((t-1+lt)%lt)*volume+z*area+y*lx+((x-1+lx)%lx);
                 }
             }
         }
     }
 }
 
-//void worm_update(int* node, int* worldline, int* edge, int nsite, int nt, gsl_rng* rng) {
-//    int start_point = (int)(gsl_rng_uniform_pos(rng)*nsite);
-//}
+void worm_update(int* node, int* worldline, int* edge, int nsite, int nt, double epsilon, double mu, gsl_rng* rng) {
+    int tail = (int)(gsl_rng_uniform_pos(rng)*nsite);
+    int head = tail;
+    int next;
+    int check=1;
+
+    double p0=exp(mu*epsilon);
+    double p1=exp(-1.0*mu*epsilon);
+    double pt=nt*epsilon;
+
+    // direction : 0
+    //      going up and create particle
+    // direction : 1
+    //      going down and destroy particle
+    int direction=1;
+    while(check) {
+        if(node[head]==0) {
+            if(gsl_rng_uniform_pos(rng)<p0) {
+                direction=0;
+            } else {
+                direction=1;
+            }
+        } else {
+            if(gsl_rng_uniform_pos(rng)<p1) {
+                direction=1;
+            } else {
+                direction=0;
+            }
+        }
+
+        if(direction==0 && worldline[2*head]==-1) {
+            if(gsl_rng_uniform_pos(rng)<pt) {
+                int index = (int)(gsl_rng_uniform_pos(rng)*nt);
+                next = edge[(nt+1)*head+1+index];
+            } else {
+                next = edge[(nt+1)*head];
+            }
+
+            if(worldline[2*next+1]==-1) {
+                worldline[2*head+0]=next;
+                worldline[2*next+1]=head;
+                head=next;
+                node[head]=1;
+            } else {
+                int temp=worldline[2*next+1];
+                worldline[2*head+0]=next;
+                worldline[2*next+1]=head;
+                head=temp;
+                worldline[2*head+0]=-1;
+            }
+        }
+        if(direction==1 && worldline[2*head+1]!=-1) {
+            node[head]=0;
+            next = worldline[2*head+1];
+            worldline[2*head+1]=-1;
+            worldline[2*next+0]=-1;
+            head=next;
+        }
+
+
+        if(head==tail) check=0;
+    }
+}
 
 int main(int argc, char** argv) {
     // optain arguments
@@ -66,7 +119,7 @@ int main(int argc, char** argv) {
     Nt=6;
 
     // allocate memory
-    Edge = (int*)malloc(sizeof(int)*2*(1+Nt)*Nsite);
+    Edge = (int*)malloc(sizeof(int)*(1+Nt)*Nsite);
     Node = (int*)malloc(sizeof(int)*Nsite);
     WorldLine = (int*)malloc(sizeof(int)*2*Nsite);
 
