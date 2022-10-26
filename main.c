@@ -42,6 +42,13 @@ void construct_cubic_lattice(int* edge, int lx, int ly, int lz, int lt) {
     }
 }
 
+void print_conf(int* node, int* worldline, int nsite) {
+    printf("------------------------------------\n");
+    for(int i=0;i<nsite;i++) {
+        printf("i=%d \t %d | [%d,%d] \n",i,node[i],worldline[2*i],worldline[2*i+1]);
+    }
+}
+
 void worm_update(int* node, int* worldline, int* edge, int nsite, int nt, gsl_rng* rng) {
     double epsilon = Epsilon;
     double mu = Mu;
@@ -90,10 +97,11 @@ void worm_update(int* node, int* worldline, int* edge, int nsite, int nt, gsl_rn
             }
         }
         if(direction==1 && worldline[2*head+1]!=-1) {
-            node[head]=0;
             next = worldline[2*head+1];
             worldline[2*head+1]=-1;
             worldline[2*next+0]=-1;
+            
+            if(worldline[2*head+0]==-1) node[head]=0;
             head=next;
         }
 
@@ -167,8 +175,8 @@ void measure(int* node, int* worldline, int* edge, int nsite, int nt, int block_
         nparticle += node[i];
     }
 
-    double energy = -(1.0/beta)*nhs+nt/(lt*(1-nt*epsilon))-mu*nparticle;
-    double energy_t = -(1.0/beta)*nhs+nt*nparticle;
+    double energy_t = -(1.0/beta)*nhs+nt/(lt*(1-nt*epsilon));
+    double energy = energy_t-mu*nparticle;
     double wx = nhx/lx;
     double wy = nhy/ly;
     double wz = nhz/lz;
@@ -183,13 +191,14 @@ void measure(int* node, int* worldline, int* edge, int nsite, int nt, int block_
     measure_count++;
 
     if(measure_count==block_size) {
-        nparticle_ave = nparticle/block_size;
+        nparticle_ave = nparticle_ave/block_size;
         energy_ave = energy_ave/block_size;
         energy_t_ave = energy_t_ave/block_size;
         winding_square_x_ave = winding_square_x_ave/block_size;
         winding_square_y_ave = winding_square_y_ave/block_size;
         winding_square_z_ave = winding_square_z_ave/block_size;
 
+        printf("----------------------------\n");
         printf("n   : %.12e \n",nparticle_ave);
         printf("e   : %.12e \n",energy_ave);
         printf("et  : %.12e \n",energy_t_ave);
@@ -203,6 +212,8 @@ void measure(int* node, int* worldline, int* edge, int nsite, int nt, int block_
         winding_square_x_ave = 0;
         winding_square_y_ave = 0;
         winding_square_z_ave = 0;
+
+        measure_count=0;
     }
 }
 
@@ -212,9 +223,9 @@ int main(int argc, char** argv) {
     Lx=atoi(argv[1]);
     Ly=atoi(argv[2]);
     Lz=atoi(argv[3]);
-    Beta=atof(argv[4]);
-    Epsilon=atof(argv[5]);
-    Mu=atof(argv[6]);
+    Mu=atof(argv[4]);
+    Beta=atof(argv[5]);
+    Epsilon=atof(argv[6]);
     int thermal=atoi(argv[7]);
     int block_size=atoi(argv[8]);
     int nblock=atoi(argv[9]);
@@ -244,6 +255,7 @@ int main(int argc, char** argv) {
     gsl_rng_set(rng,seed);
 
     // thermaliztion
+
     for(int i=0;i<thermal;i++) {
         worm_update(Node,WorldLine,Edge,Nsite,Nt,rng);
     }
@@ -255,6 +267,15 @@ int main(int argc, char** argv) {
 
             measure(Node,WorldLine,Edge,Nsite,Nt,block_size);
         }
+    }
+
+    if(0) {
+        worm_update(Node,WorldLine,Edge,Nsite,Nt,rng);
+        print_conf(Node,WorldLine,Nsite);
+        worm_update(Node,WorldLine,Edge,Nsite,Nt,rng);
+        print_conf(Node,WorldLine,Nsite);
+        worm_update(Node,WorldLine,Edge,Nsite,Nt,rng);
+        print_conf(Node,WorldLine,Nsite);
     }
 
     // free memory
