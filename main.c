@@ -63,10 +63,10 @@ void worm_update(int* node, int* worldline, int* edge, int nsite, int nt, gsl_rn
     double pt=nt*epsilon;
 
     // direction : 0
-    //      going up and create particle
+    //      moving forward in temperal direction
     // direction : 1
-    //      going down and destroy particle
-    int direction=1;
+    //      moving backward in temperal direction
+    int direction=0;
     while(check) {
         direction = (int)(gsl_rng_uniform_pos(rng)*2);
         if(direction) {
@@ -172,11 +172,13 @@ void measure(int* node, int* worldline, int* edge, int nsite, int nt, int block_
     int volume=lx*ly*lz;
     int nparticle=0;
     for(int i=0;i<volume;i++) {
-        nparticle += node[i];
+        nparticle += node[i+volume];
     }
 
-    double energy_t = -(1.0/beta)*nhs+nt/(lt*(1-nt*epsilon));
+    double energy_t = -(1.0/beta)*nhs+nt*nht/(lt*(1-nt*epsilon));
     double energy = energy_t-mu*nparticle;
+    //double energy_t = -(1.0/beta)*nhs+nt*nparticle;
+    //double energy = -(1.0/beta)*nhs+(nt-mu)*nparticle;
     double wx = nhx/lx;
     double wy = nhy/ly;
     double wz = nhz/lz;
@@ -198,13 +200,22 @@ void measure(int* node, int* worldline, int* edge, int nsite, int nt, int block_
         winding_square_y_ave = winding_square_y_ave/block_size;
         winding_square_z_ave = winding_square_z_ave/block_size;
 
-        printf("----------------------------\n");
-        printf("n   : %.12e \n",nparticle_ave);
-        printf("e   : %.12e \n",energy_ave);
-        printf("et  : %.12e \n",energy_t_ave);
-        printf("wx2 : %.12e \n",winding_square_x_ave);
-        printf("wy2 : %.12e \n",winding_square_y_ave);
-        printf("wz2 : %.12e \n",winding_square_z_ave);
+        // print to stdout
+        if(1) {
+            printf("----------------------------\n");
+            printf("n   : %.12e \n",nparticle_ave);
+            printf("e   : %.12e \n",energy_ave);
+            printf("et  : %.12e \n",energy_t_ave);
+            printf("wx2 : %.12e \n",winding_square_x_ave);
+            printf("wy2 : %.12e \n",winding_square_y_ave);
+            printf("wz2 : %.12e \n",winding_square_z_ave);
+        }
+        
+        // print to file
+        FILE* dfile = fopen("data.txt","a");
+        fprintf(dfile,"%.12e %.12e %.12e %.12e %.12e %.12e \n",nparticle_ave,energy_ave,energy_t_ave,winding_square_x_ave,winding_square_y_ave,winding_square_z_ave);
+        fclose(dfile);
+
 
         nparticle_ave = 0;
         energy_ave = 0;
