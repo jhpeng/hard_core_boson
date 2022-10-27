@@ -36,6 +36,14 @@ void construct_cubic_lattice(int* edge, int lx, int ly, int lz, int lt) {
                     edge[(nt+1)*i0+4] = ((t+1)%lt)*volume+((z-1+lz)%lz)*area+y*lx+x;
                     edge[(nt+1)*i0+5] = ((t+1)%lt)*volume+z*area+((y-1+ly)%ly)*lx+x;
                     edge[(nt+1)*i0+6] = ((t+1)%lt)*volume+z*area+y*lx+((x-1+lx)%lx);
+
+                    if(0) {
+                        printf("%d | %d : %d | ",t,i0%volume,(t+1)%lt);
+                        for(int i=0;i<7;i++) {
+                            printf("%d ",edge[(nt+1)*i0+i]%volume);
+                        }
+                        printf("\n");
+                    }
                 }
             }
         }
@@ -49,6 +57,9 @@ void print_conf(int* node, int* worldline, int nsite) {
     }
 }
 
+static int number_of_moving;
+
+#if(0)
 void worm_update(int* node, int* worldline, int* edge, int nsite, int nt, gsl_rng* rng) {
     double epsilon = Epsilon;
     double mu = Mu;
@@ -62,13 +73,15 @@ void worm_update(int* node, int* worldline, int* edge, int nsite, int nt, gsl_rn
     double p1=exp(-1.0*mu*epsilon);
     double pt=nt*epsilon;
 
+    number_of_moving=-1;
+
     // direction : 0
     //      moving forward in temperal direction
     // direction : 1
     //      moving backward in temperal direction
     int direction=0;
+    if(node[tail]) direction=1;
     while(check) {
-        direction = (int)(gsl_rng_uniform_pos(rng)*2);
         if(direction) {
             if(gsl_rng_uniform_pos(rng)>p1) direction=0;
         } else {
@@ -108,6 +121,88 @@ void worm_update(int* node, int* worldline, int* edge, int nsite, int nt, gsl_rn
         //printf("%d %d \n",head,tail);
 
         if(head==tail) check=0;
+
+        direction = (int)(gsl_rng_uniform_pos(rng)*2);
+        number_of_moving++;
+    }
+
+    printf("%d\n",number_of_moving);
+}
+#endif
+
+void worm_update(int* node, int* worldline, int* edge, int nsite, int nt, gsl_rng* rng) {
+    double epsilon = Epsilon;
+    double mu = Mu;
+
+    int tail = (int)(gsl_rng_uniform_pos(rng)*nsite);
+    int head = tail;
+    int next;
+    int check=1;
+
+    double p0=exp(mu*epsilon);
+    double p1=exp(-1.0*mu*epsilon);
+    double pt=nt*epsilon;
+
+    number_of_moving=-1;
+
+    // direction : 0
+    //      moving forward in temperal direction
+    // direction : 1
+    //      moving backward in temperal direction
+    int direction=0;
+    if(node[tail]) direction=1;
+    while(check) {
+        if(direction) {
+            if(gsl_rng_uniform_pos(rng)<p1) {
+                if(worldline[2*head+1]!=-1) {
+                    next = worldline[2*head+1];
+                    worldline[2*head+1]=-1;
+                    worldline[2*next+0]=-1;
+            
+                    if(worldline[2*head+0]==-1) node[head]=0;
+                        head=next;
+                }
+            }
+        } else {
+            if(gsl_rng_uniform_pos(rng)<p0) {
+                if(worldline[2*head]==-1) {
+                    if(gsl_rng_uniform_pos(rng)<pt) {
+                        int index = (int)(gsl_rng_uniform_pos(rng)*nt);
+                        next = edge[(nt+1)*head+1+index];
+                    } else {
+                        next = edge[(nt+1)*head];
+                    }
+
+                    if(worldline[2*next+1]==-1) {
+                        worldline[2*head+0]=next;
+                        worldline[2*next+1]=head;
+                        head=next;
+                        node[head]=1;
+                    } else {
+                        int temp=worldline[2*next+1];
+                        worldline[2*head+0]=next;
+                        worldline[2*next+1]=head;
+                        head=temp;
+                        worldline[2*head+0]=-1;
+                    }
+                }
+            } else if(worldline[2*head+1]!=-1) {
+                next = worldline[2*head+1];
+                worldline[2*head+1]=-1;
+                worldline[2*next+0]=-1;
+            
+                if(worldline[2*head+0]==-1) node[head]=0;
+                    head=next;
+            }
+        }
+
+
+        //printf("%d %d \n",head,tail);
+
+        if(head==tail) check=0;
+
+        direction = (int)(gsl_rng_uniform_pos(rng)*2);
+        number_of_moving++;
     }
 }
 
@@ -172,7 +267,7 @@ void measure(int* node, int* worldline, int* edge, int nsite, int nt, int block_
     int volume=lx*ly*lz;
     int nparticle=0;
     for(int i=0;i<volume;i++) {
-        nparticle += node[i+volume];
+        nparticle += node[i];
     }
 
     double energy_t = -(1.0/beta)*nhs+nt*nht/(lt*(1-nt*epsilon));
