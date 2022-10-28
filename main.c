@@ -3,8 +3,11 @@
 #include <math.h>
 #include <gsl/gsl_rng.h>
 
-// physics parameter
+// physics parameters
 double Beta,Epsilon,Mu;
+
+// Monte Carlo parameters
+int Thermal,BlockSize,Nblock,Seed;
 
 // system size
 int Lx,Ly,Lz,Lt;
@@ -332,10 +335,10 @@ int main(int argc, char** argv) {
     Mu=atof(argv[4]);
     Beta=atof(argv[5]);
     Epsilon=atof(argv[6]);
-    int thermal=atoi(argv[7]);
-    int block_size=atoi(argv[8]);
-    int nblock=atoi(argv[9]);
-    int seed=atoi(argv[10]);
+    Thermal=atoi(argv[7]);
+    BlockSize=atoi(argv[8]);
+    Nblock=atoi(argv[9]);
+    Seed=atoi(argv[10]);
 
 
     // setup useful parameters
@@ -358,20 +361,20 @@ int main(int argc, char** argv) {
 
     // setup random number generator
     gsl_rng* rng = gsl_rng_alloc(gsl_rng_mt19937);
-    gsl_rng_set(rng,seed);
+    gsl_rng_set(rng,Seed);
 
     // thermaliztion
 
-    for(int i=0;i<thermal;i++) {
+    for(int i=0;i<Thermal;i++) {
         worm_update(Node,WorldLine,Edge,Nsite,Nt,rng);
     }
 
-    for(int j=0;j<nblock;j++) {
-        for(int i=0;i<block_size;i++) {
+    for(int j=0;j<Nblock;j++) {
+        for(int i=0;i<BlockSize;i++) {
             for(int k=0;k<10;k++)
                 worm_update(Node,WorldLine,Edge,Nsite,Nt,rng);
 
-            measure(Node,WorldLine,Edge,Nsite,Nt,block_size);
+            measure(Node,WorldLine,Edge,Nsite,Nt,BlockSize);
         }
     }
 
