@@ -8,6 +8,7 @@ double Beta,Epsilon,Mu;
 
 // Monte Carlo parameters
 int Thermal,BlockSize,Nblock,Seed;
+int iBlock=0;
 
 // system size
 int Lx,Ly,Lz,Lt;
@@ -326,6 +327,11 @@ void measure(int* node, int* worldline, int* edge, int nsite, int nt, int block_
     }
 }
 
+//void save_check_point() {
+//    printf("saving the check point...\n");
+//
+//    FILE* pfile = fopen()
+//}
 
 int main(int argc, char** argv) {
     // optain arguments
@@ -333,7 +339,7 @@ int main(int argc, char** argv) {
     Ly=atoi(argv[2]);
     Lz=atoi(argv[3]);
     Mu=atof(argv[4]);
-    Beta=atof(argv[5]);
+    Lt=atoi(argv[5]);
     Epsilon=atof(argv[6]);
     Thermal=atoi(argv[7]);
     BlockSize=atoi(argv[8]);
@@ -342,7 +348,7 @@ int main(int argc, char** argv) {
 
 
     // setup useful parameters
-    Lt=(int)(Beta/Epsilon);
+    Beta=Lt*Epsilon;
     Nsite=Lx*Ly*Lz*Lt;
     Nt=6;
 
@@ -369,22 +375,13 @@ int main(int argc, char** argv) {
         worm_update(Node,WorldLine,Edge,Nsite,Nt,rng);
     }
 
-    for(int j=0;j<Nblock;j++) {
+    for(int j=iBlock;j<Nblock;j++) {
         for(int i=0;i<BlockSize;i++) {
             for(int k=0;k<10;k++)
                 worm_update(Node,WorldLine,Edge,Nsite,Nt,rng);
 
             measure(Node,WorldLine,Edge,Nsite,Nt,BlockSize);
         }
-    }
-
-    if(0) {
-        worm_update(Node,WorldLine,Edge,Nsite,Nt,rng);
-        print_conf(Node,WorldLine,Nsite);
-        worm_update(Node,WorldLine,Edge,Nsite,Nt,rng);
-        print_conf(Node,WorldLine,Nsite);
-        worm_update(Node,WorldLine,Edge,Nsite,Nt,rng);
-        print_conf(Node,WorldLine,Nsite);
     }
 
     // free memory
